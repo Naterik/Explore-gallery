@@ -18,6 +18,9 @@ export function PhotoDetailModal({
   open,
   onOpenChange,
 }: PhotoDetailModalProps) {
+  // ✅ Kiểm tra xem URL có phải Base64 không
+  const isBase64 = photoData?.url?.startsWith("data:image");
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl">
@@ -45,12 +48,15 @@ export function PhotoDetailModal({
                 <p className="text-gray-600">Album ID</p>
                 <p className="font-semibold">{photoData.albumId}</p>
               </div>
-              <div>
-                <p className="text-gray-600">URL Ảnh</p>
-                <p className="font-mono text-xs break-all text-blue-600">
-                  {photoData.url}
-                </p>
-              </div>
+
+              {!isBase64 && (
+                <div>
+                  <p className="text-gray-600">URL Ảnh</p>
+                  <p className="font-mono text-xs break-all text-blue-600">
+                    {photoData.url}
+                  </p>
+                </div>
+              )}
             </div>
           </div>
         ) : (

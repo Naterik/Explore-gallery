@@ -9,23 +9,62 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const page = searchParams.get("_page") || "1";
+    const search = searchParams.get("search") || "";
+    const sort = searchParams.get("sort") || "newest";
     const limit = "10";
-    const res = await axios.get(`${apiUrl}?_page=${+page}&_limit=${limit}`);
-    const photos = res.data;
-    const updatedPhotos = photos.map((photo: any, index: number) => {
-      const imageIndex = (parseInt(page) * 10 + index) % REAL_IMAGES.length;
+
+    const res = await axios.get(`${apiUrl}?_limit=5000`);
+    let photos = res.data;
+
+    if (search) {
+      photos = photos.filter((photo: any) =>
+        photo.title.toLowerCase().includes(search.toLowerCase())
+      );
+    }
+
+    switch (sort) {
+      case "title-asc":
+        photos.sort((a: any, b: any) => a.title.localeCompare(b.title));
+        break;
+      case "title-desc":
+        photos.sort((a: any, b: any) => b.title.localeCompare(a.title));
+        break;
+      case "album-asc":
+        photos.sort((a: any, b: any) => a.albumId - b.albumId);
+        break;
+      case "album-desc":
+        photos.sort((a: any, b: any) => b.albumId - a.albumId);
+        break;
+      case "oldest":
+        photos.sort((a: any, b: any) => a.id - b.id);
+        break;
+      case "newest":
+      default:
+        photos.sort((a: any, b: any) => b.id - a.id);
+        break;
+    }
+
+    const startIdx = (+page - 1) * +limit;
+    const endIdx = startIdx + +limit;
+    const paginatedPhotos = photos.slice(startIdx, endIdx);
+
+    //get random image
+    const updatedPhotos = paginatedPhotos.map((photo: any, index: number) => {
+      const imageIndex = (startIdx + index) % REAL_IMAGES.length;
       return {
         ...photo,
         thumbnailUrl: REAL_IMAGES[imageIndex],
         url: REAL_IMAGES[imageIndex],
       };
     });
-    const nextCursor =
-      photos.length === parseInt(limit) ? parseInt(page) + 1 : null;
+
+    const nextCursor = endIdx < photos.length ? +page + 1 : null;
+
     return new Response(
       JSON.stringify({
         data: updatedPhotos,
         nextCursor: nextCursor,
+        totalCount: photos.length,
       }),
       {
         status: 200,
@@ -43,38 +82,20 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    // ✅ Sửa: Đọc JSON body thay vì formData
     const body = await request.json();
     const { id, title, url, thumbnailUrl, albumId } = body;
-
-    // ✅ Validate dữ liệu trước khi gửi
-    if (!title || !url) {
-      return new Response(
-        JSON.stringify({ error: "Title và URL là bắt buộc" }),
-        { status: 400, headers: { "Content-Type": "application/json" } }
-      );
-    }
-
-    // ✅ Gửi lên JSONPlaceholder
     const res = await axios.post(apiUrl, {
-      id: id || Math.random().toString(36).substr(2, 9),
+      id,
       title,
       url,
-      thumbnailUrl: thumbnailUrl || url,
-      albumId: albumId || 1,
+      thumbnailUrl,
+      albumId,
     });
-
-    console.log("✅ Ảnh đã thêm:", res.data);
-
     return new Response(JSON.stringify(res.data), {
       status: 201,
       headers: { "Content-Type": "application/json" },
     });
   } catch (error: any) {
-    console.error(
-      "❌ Lỗi khi thêm ảnh:",
-      error.response?.data || error.message
-    );
     return new Response(
       JSON.stringify({
         error: "Lỗi khi thêm ảnh",

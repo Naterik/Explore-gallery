@@ -26,6 +26,18 @@ import { v4 as uuidv4 } from "uuid";
 import { useState } from "react";
 import axios from "axios";
 import { useQueryClient, useMutation } from "@tanstack/react-query";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { toast } from "sonner";
+import { Plus } from "lucide-react";
+import { Spinner } from "@/components/ui/spinner";
 
 const formSchema = z.object({
   id: z.string().uuid(),
@@ -33,11 +45,17 @@ const formSchema = z.object({
     message: "Title must be at least 2 characters.",
   }),
   url: z.string().optional(),
-  file: z.instanceof(File).optional(),
+  thumbnailUrl: z.string().optional(),
+  albumId: z.number(),
 });
 
-const ModalCreate = () => {
-  const [open, setOpen] = useState(false);
+type IProps = {
+  albums: IAlbum[];
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+};
+
+const ModalCreate = ({ albums, open, onOpenChange }: IProps) => {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const queryClient = useQueryClient();
 
@@ -46,18 +64,20 @@ const ModalCreate = () => {
     defaultValues: {
       title: "",
       url: "",
+      albumId: 1,
       id: uuidv4(),
     },
   });
 
-  // ✅ Xử lý khi chọn file
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      // ✅ Tạo preview URL
       const reader = new FileReader();
       reader.onloadend = () => {
-        setPreviewUrl(reader.result as string);
+        const base64Url = reader.result as string;
+        setPreviewUrl(base64Url);
+        form.setValue("url", base64Url);
+        form.setValue("thumbnailUrl", base64Url);
       };
       reader.readAsDataURL(file);
     }
@@ -65,70 +85,75 @@ const ModalCreate = () => {
 
   const mutation = useMutation({
     mutationFn: async (newPhoto: any) => {
-      if (newPhoto.file) {
-        const formData = new FormData();
-        formData.append("file", newPhoto.file);
-        formData.append("title", newPhoto.title);
-        formData.append("id", newPhoto.id);
-        formData.append("albumId", newPhoto.albumId);
-
-        return axios.post("/api/photos", formData, {
-          headers: { "Content-Type": "multipart/form-data" },
-        });
-      }
-
-      // Nếu có URL, gửi thường
-      return axios.post("/api/photos", newPhoto);
+      return axios.post("/api/photos", {
+        id: newPhoto.id,
+        title: newPhoto.title,
+        url: newPhoto.url,
+        thumbnailUrl: newPhoto.thumbnailUrl,
+        albumId: newPhoto.albumId,
+      });
     },
+    mutationKey: ["photos"],
     onSuccess: () => {
-      console.log("✅ Thêm ảnh thành công!");
-      queryClient.invalidateQueries({ queryKey: ["projects"] });
-      setOpen(false);
+      queryClient.invalidateQueries({ queryKey: ["photos"] });
+      const newPhoto = {
+        id: form.getValues("id"),
+        title: form.getValues("title"),
+        url: form.getValues("url"),
+        thumbnailUrl: form.getValues("thumbnailUrl"),
+        albumId: form.getValues("albumId"),
+      };
+      window.dispatchEvent(new CustomEvent("photoAdded", { detail: newPhoto }));
+
+      onOpenChange(false);
       setPreviewUrl(null);
-      form.reset({ id: uuidv4(), title: "", url: "" });
-      alert("✅ Thêm ảnh thành công!");
+      form.reset({ id: uuidv4(), title: "", url: "", albumId: 1 });
+      toast.success("Thêm ảnh thành công!", {
+        style: {
+          "--normal-bg": "var(--background)",
+          "--normal-text":
+            "light-dark(var(--color-green-600), var(--color-green-400))",
+          "--normal-border":
+            "light-dark(var(--color-green-600), var(--color-green-400))",
+        } as React.CSSProperties,
+      });
     },
     onError: (error: any) => {
-      console.error("❌ Lỗi khi thêm ảnh:", error);
-      alert(
-        "❌ Lỗi: " + (error?.response?.data?.message || "Không thể thêm ảnh")
+      toast.error(
+        " Lỗi: " + (error?.response?.data?.message || "Không thể thêm ảnh")
       );
     },
   });
-
-  // ✅ Hàm onSubmit gọi mutation.mutate()
   function onSubmit(values: z.infer<typeof formSchema>) {
-    // Kiểm tra bắt buộc có URL hoặc file
-    const fileInput = document.querySelector(
-      'input[type="file"]'
-    ) as HTMLInputElement;
-    const file = fileInput?.files?.[0];
-
-    if (!values.url && !file) {
-      alert("❌ Vui lòng nhập URL hoặc chọn file ảnh!");
+    if (!values.title) {
+      toast.error(" Vui lòng nhập tiêu đề!");
       return;
     }
-
+    if (!values.url) {
+      toast.error("Vui lòng chọn file ảnh!");
+      return;
+    }
     mutation.mutate({
       id: values.id,
       title: values.title,
-      url: values.url || "",
-      file: file || null,
-      thumbnailUrl: previewUrl || values.url || "",
-      albumId: 1,
+      url: values.url,
+      thumbnailUrl: values.thumbnailUrl || values.url,
+      albumId: values.albumId || 1,
     });
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogTrigger asChild>
-        <Button variant="outline">➕ Thêm Ảnh Mới</Button>
+        <Button variant="outline">
+          <Plus /> Thêm Ảnh Mới
+        </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-[425px] " aria-describedby={undefined}>
         <DialogHeader>
           <DialogTitle>Thêm Ảnh Mới</DialogTitle>
           <DialogDescription>
-            Nhập tiêu đề và chọn file hoặc nhập URL ảnh
+            Nhập tiêu đề và chọn file ảnh từ máy tính
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -140,8 +165,38 @@ const ModalCreate = () => {
                 <Input placeholder="id" {...field} hidden />
               )}
             />
+            <FormField
+              control={form.control}
+              name="albumId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Album</FormLabel>
+                  <Select
+                    value={field.value?.toString()}
+                    onValueChange={(value) => field.onChange(parseInt(value))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Chọn album" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectGroup>
+                        <SelectLabel>Albums</SelectLabel>
+                        {albums.map((album) => (
+                          <SelectItem
+                            key={album.id}
+                            value={album.id.toString()}
+                          >
+                            {album.title}
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-            {/* Tiêu đề */}
             <FormField
               control={form.control}
               name="title"
@@ -159,7 +214,6 @@ const ModalCreate = () => {
               )}
             />
 
-            {/* Chọn file ảnh */}
             <FormItem>
               <FormLabel>Chọn File Ảnh</FormLabel>
               <FormControl>
@@ -174,7 +228,6 @@ const ModalCreate = () => {
               </FormDescription>
             </FormItem>
 
-            {/* Preview ảnh */}
             {previewUrl && (
               <div className="border rounded p-2">
                 <img
@@ -185,37 +238,26 @@ const ModalCreate = () => {
               </div>
             )}
 
-            {/* Hoặc nhập URL */}
-            <div className="text-center text-gray-500 text-sm">— HOẶC —</div>
-
             <FormField
               control={form.control}
               name="url"
               render={({ field }) => (
-                <FormItem>
-                  <FormLabel>URL Ảnh</FormLabel>
-                  <FormControl>
-                    <Input
-                      placeholder="https://example.com/image.jpg"
-                      type="url"
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormDescription>
-                    Dán URL từ Unsplash, Pexels, ...
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
+                <Input placeholder="url" {...field} hidden />
               )}
             />
 
-            {/* Nút submit */}
             <Button
               type="submit"
               disabled={mutation.isPending}
               className="w-full"
             >
-              {mutation.isPending ? "⏳ Đang thêm..." : "✅ Thêm Ảnh"}
+              {mutation.isPending ? (
+                <div className="flex items-center">
+                  <Spinner className="mr-3" /> <span>Đang thêm...</span>
+                </div>
+              ) : (
+                "Thêm Ảnh"
+              )}
             </Button>
           </form>
         </Form>
