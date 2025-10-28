@@ -27,15 +27,12 @@ import { useState } from "react";
 import axios from "axios";
 import { useQueryClient, useMutation } from "@tanstack/react-query";
 
-// ✅ Schema hỗ trợ cả file và URL
 const formSchema = z.object({
   id: z.string().uuid(),
   title: z.string().min(2, {
     message: "Title must be at least 2 characters.",
   }),
-  // URL có thể để trống nếu chọn file
   url: z.string().optional(),
-  // File có thể để trống nếu nhập URL
   file: z.instanceof(File).optional(),
 });
 
@@ -66,10 +63,8 @@ const ModalCreate = () => {
     }
   };
 
-  // ✅ Sử dụng useMutation để quản lý POST request
   const mutation = useMutation({
     mutationFn: async (newPhoto: any) => {
-      // Nếu có file, upload lên API
       if (newPhoto.file) {
         const formData = new FormData();
         formData.append("file", newPhoto.file);
@@ -77,7 +72,7 @@ const ModalCreate = () => {
         formData.append("id", newPhoto.id);
         formData.append("albumId", newPhoto.albumId);
 
-        return axios.post("/api/photos/upload", formData, {
+        return axios.post("/api/photos", formData, {
           headers: { "Content-Type": "multipart/form-data" },
         });
       }

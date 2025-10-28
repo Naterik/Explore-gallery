@@ -1,28 +1,37 @@
 import { REAL_IMAGES } from "@/public/seed";
 import axios from "axios";
+import { get } from "http";
 
-const apiUrl = process.env.API || "https://jsonplaceholder.typicode.com/photos";
+const apiUrl =
+  process.env.API_PHOTOS || "https://jsonplaceholder.typicode.com/photos";
 
 export async function GET(request: Request) {
   try {
-    const res = await axios.get(apiUrl);
+    const { searchParams } = new URL(request.url);
+    const page = searchParams.get("_page") || "1";
+    const limit = "10";
+    const res = await axios.get(`${apiUrl}?_page=${+page}&_limit=${limit}`);
     const photos = res.data;
     const updatedPhotos = photos.map((photo: any, index: number) => {
-      const imageIndex = index % REAL_IMAGES.length;
+      const imageIndex = (parseInt(page) * 10 + index) % REAL_IMAGES.length;
       return {
         ...photo,
         thumbnailUrl: REAL_IMAGES[imageIndex],
         url: REAL_IMAGES[imageIndex],
       };
     });
-
-    return new Response(JSON.stringify(updatedPhotos), {
-      status: 200,
-      headers: {
-        "Content-Type": "application/json",
-        "Cache-Control": "public, max-age=3600",
-      },
-    });
+    const nextCursor =
+      photos.length === parseInt(limit) ? parseInt(page) + 1 : null;
+    return new Response(
+      JSON.stringify({
+        data: updatedPhotos,
+        nextCursor: nextCursor,
+      }),
+      {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }
+    );
   } catch (error) {
     console.error("Error fetching photos:", error);
     return new Response(JSON.stringify({ error: "Failed to fetch photos" }), {

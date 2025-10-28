@@ -8,7 +8,5 @@ export interface IPhoto {
 
 export interface Gallery {
   photos: IPhoto[];
-  total: number;
-  page: number;
-  pageSize: number;
+  nextCursor: number;
 }

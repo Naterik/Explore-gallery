@@ -1,7 +1,5 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
-import axios from "axios";
 import {
   Dialog,
   DialogContent,
@@ -10,57 +8,47 @@ import {
 } from "@/components/ui/dialog";
 
 interface PhotoDetailModalProps {
-  photoId: string | null;
+  photoData: any;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
 export function PhotoDetailModal({
-  photoId,
+  photoData,
   open,
   onOpenChange,
 }: PhotoDetailModalProps) {
-  const { data: photo, isLoading } = useQuery({
-    queryKey: ["photo", photoId],
-    queryFn: () => axios.get(`/api/photos/${photoId}`).then((res) => res.data),
-    enabled: !!photoId && open,
-  });
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle>{photo?.title || "Loading..."}</DialogTitle>
+          <DialogTitle>{photoData?.title || "Loading..."}</DialogTitle>
         </DialogHeader>
-        {isLoading ? (
-          <div className="text-center py-8">⏳ Đang tải...</div>
-        ) : photo ? (
+        {photoData ? (
           <div className="space-y-4">
-            {/* Ảnh full size */}
             <img
-              src={photo.url || photo.thumbnailUrl}
-              alt={photo.title}
+              src={photoData.url || photoData.thumbnailUrl}
+              alt={photoData.title}
               className="w-full h-96 object-cover rounded-lg"
             />
 
-            {/* Thông tin ảnh */}
             <div className="space-y-3 text-sm">
               <div>
                 <p className="text-gray-600">ID</p>
-                <p className="font-semibold">{photo.id}</p>
+                <p className="font-semibold">{photoData.id}</p>
               </div>
               <div>
                 <p className="text-gray-600">Tiêu đề</p>
-                <p className="font-semibold">{photo.title}</p>
+                <p className="font-semibold">{photoData.title}</p>
               </div>
               <div>
                 <p className="text-gray-600">Album ID</p>
-                <p className="font-semibold">{photo.albumId}</p>
+                <p className="font-semibold">{photoData.albumId}</p>
               </div>
               <div>
                 <p className="text-gray-600">URL Ảnh</p>
                 <p className="font-mono text-xs break-all text-blue-600">
-                  {photo.url}
+                  {photoData.url}
                 </p>
               </div>
             </div>
