@@ -1,7 +1,4 @@
 "use client";
-import ModalCreate from "@/components/gallery/ModalCreate";
-import { PhotoDetailModal } from "@/components/gallery/PhotoDetailModal";
-import FilterGallery from "@/components/gallery/Filter";
 import {
   useQuery,
   useMutation,
@@ -13,11 +10,16 @@ import React, { useEffect, useState, useMemo } from "react";
 import { useInView } from "react-intersection-observer";
 import Loading from "./loading";
 import Error from "./error";
-import Items from "@/components/gallery/Items";
+import Items from "@/components/gallery/GalleryItems";
 import { Filter } from "lucide-react";
+import { GalleryPhotoDetailModal } from "@/components/gallery/GalleryPhotoDetailModal";
+import GalleryItems from "@/components/gallery/GalleryItems";
+import GalleryFilter from "@/components/gallery/GalleryFilter";
+import GalleryModalCreate from "@/components/gallery/GalleryModalCreate";
 
-function Gallery() {
+const Gallery = () => {
   const { ref, inView } = useInView();
+  const queryClient = useQueryClient();
   const [title, setTitle] = useState("");
   const [selectedPhotoData, setSelectedPhotoData] = useState<IPhoto | null>(
     null
@@ -25,20 +27,8 @@ function Gallery() {
   const [albums, setAlbums] = useState<IAlbum[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [modalCreatePhotoOpen, setModalCreatePhotoOpen] = useState(false);
-  const [localPhotos, setLocalPhotos] = useState<IPhoto[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [sortBy, setSortBy] = useState("newest");
-
-  useEffect(() => {
-    const stored = localStorage.getItem("customPhotos");
-    if (stored) {
-      try {
-        setLocalPhotos(JSON.parse(stored));
-      } catch (e) {
-        console.error("Error parsing stored photos:", e);
-      }
-    }
-  }, []);
 
   const fetchAllPhotos = async ({ pageParam = 1 }: { pageParam: number }) => {
     const params = new URLSearchParams({
@@ -55,6 +45,21 @@ function Gallery() {
     setAlbums(res.data.data);
     return res.data;
   };
+
+  // Mutation để thêm ảnh mới
+  const addPhotoMutation = useMutation({
+    mutationFn: async (newPhoto: any) => {
+      const res = await axios.post("/api/photos", newPhoto);
+      return res.data;
+    },
+    onSuccess: () => {
+      // Refetch photos sau khi thêm thành công
+      queryClient.invalidateQueries({ queryKey: ["photos"] });
+    },
+    onError: (error) => {
+      console.error("Error adding photo:", error);
+    },
+  });
 
   const {
     data,
@@ -79,23 +84,6 @@ function Gallery() {
   };
 
   useEffect(() => {
-    const handleNewPhotoAdded = (event: any) => {
-      const newPhoto = event.detail;
-      setLocalPhotos((prev) => [newPhoto, ...prev]);
-
-      const stored = localStorage.getItem("customPhotos");
-      const photos = stored ? JSON.parse(stored) : [];
-      localStorage.setItem(
-        "customPhotos",
-        JSON.stringify([newPhoto, ...photos])
-      );
-    };
-
-    window.addEventListener("photoAdded", handleNewPhotoAdded);
-    return () => window.removeEventListener("photoAdded", handleNewPhotoAdded);
-  }, []);
-
-  useEffect(() => {
     if (inView && hasNextPage && !isFetchingNextPage) {
       fetchNextPage();
     }
@@ -108,13 +96,13 @@ function Gallery() {
         <h1 className="text-3xl font-bold">
           🖼️ Photo Gallery - Infinite Scroll
         </h1>
-        <ModalCreate
+        <GalleryModalCreate
           albums={albums}
           open={modalCreatePhotoOpen}
           onOpenChange={setModalCreatePhotoOpen}
         />
       </div>
-      <FilterGallery
+      <GalleryFilter
         searchTerm={searchTerm}
         setSearchTerm={setSearchTerm}
         sortBy={sortBy}
@@ -125,8 +113,7 @@ function Gallery() {
 
       {error && <Error error={error} />}
 
-      <Items
-        localPhotos={localPhotos}
+      <GalleryItems
         data={data}
         handlePhotoClick={handlePhotoClick}
         isFetchingNextPage={isFetchingNextPage}
@@ -134,13 +121,13 @@ function Gallery() {
         ref={ref}
       />
 
-      <PhotoDetailModal
+      <GalleryPhotoDetailModal
         photoData={selectedPhotoData}
         open={modalOpen}
         onOpenChange={setModalOpen}
       />
     </div>
   );
-}
+};
 
 export default Gallery;

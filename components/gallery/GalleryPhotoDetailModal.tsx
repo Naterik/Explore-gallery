@@ -13,7 +13,7 @@ interface PhotoDetailModalProps {
   onOpenChange: (open: boolean) => void;
 }
 
-export function PhotoDetailModal({
+export function GalleryPhotoDetailModal({
   photoData,
   open,
   onOpenChange,

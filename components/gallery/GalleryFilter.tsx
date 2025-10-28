@@ -17,7 +17,7 @@ type IProps = {
   setSortBy: (value: string) => void;
 };
 
-const FilterGallery = ({
+const GalleryFilter = ({
   searchTerm,
   setSearchTerm,
   sortBy,
@@ -47,8 +47,6 @@ const FilterGallery = ({
               <SelectItem value="oldest"> Cũ nhất</SelectItem>
               <SelectItem value="title-asc"> Tiêu đề A-Z</SelectItem>
               <SelectItem value="title-desc"> Tiêu đề Z-A</SelectItem>
-              <SelectItem value="album-asc"> Album ↑</SelectItem>
-              <SelectItem value="album-desc"> Album ↓</SelectItem>
             </SelectGroup>
           </SelectContent>
         </Select>
@@ -57,4 +55,4 @@ const FilterGallery = ({
   );
 };
 
-export default FilterGallery;
+export default GalleryFilter;

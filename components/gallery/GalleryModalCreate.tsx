@@ -22,7 +22,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { v4 as uuidv4 } from "uuid";
 import { useState } from "react";
 import axios from "axios";
 import { useQueryClient, useMutation } from "@tanstack/react-query";
@@ -40,7 +39,6 @@ import { Plus } from "lucide-react";
 import { Spinner } from "@/components/ui/spinner";
 
 const formSchema = z.object({
-  id: z.string().uuid(),
   title: z.string().min(2, {
     message: "Title must be at least 2 characters.",
   }),
@@ -55,7 +53,7 @@ type IProps = {
   onOpenChange: (open: boolean) => void;
 };
 
-const ModalCreate = ({ albums, open, onOpenChange }: IProps) => {
+const GalleryModalCreate = ({ albums, open, onOpenChange }: IProps) => {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const queryClient = useQueryClient();
 
@@ -65,7 +63,6 @@ const ModalCreate = ({ albums, open, onOpenChange }: IProps) => {
       title: "",
       url: "",
       albumId: 1,
-      id: uuidv4(),
     },
   });
 
@@ -86,7 +83,6 @@ const ModalCreate = ({ albums, open, onOpenChange }: IProps) => {
   const mutation = useMutation({
     mutationFn: async (newPhoto: any) => {
       return axios.post("/api/photos", {
-        id: newPhoto.id,
         title: newPhoto.title,
         url: newPhoto.url,
         thumbnailUrl: newPhoto.thumbnailUrl,
@@ -96,18 +92,10 @@ const ModalCreate = ({ albums, open, onOpenChange }: IProps) => {
     mutationKey: ["photos"],
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["photos"] });
-      const newPhoto = {
-        id: form.getValues("id"),
-        title: form.getValues("title"),
-        url: form.getValues("url"),
-        thumbnailUrl: form.getValues("thumbnailUrl"),
-        albumId: form.getValues("albumId"),
-      };
-      window.dispatchEvent(new CustomEvent("photoAdded", { detail: newPhoto }));
 
       onOpenChange(false);
       setPreviewUrl(null);
-      form.reset({ id: uuidv4(), title: "", url: "", albumId: 1 });
+      form.reset({ title: "", url: "", albumId: 1 });
       toast.success("Thêm ảnh thành công!", {
         style: {
           "--normal-bg": "var(--background)",
@@ -134,7 +122,6 @@ const ModalCreate = ({ albums, open, onOpenChange }: IProps) => {
       return;
     }
     mutation.mutate({
-      id: values.id,
       title: values.title,
       url: values.url,
       thumbnailUrl: values.thumbnailUrl || values.url,
@@ -158,13 +145,6 @@ const ModalCreate = ({ albums, open, onOpenChange }: IProps) => {
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            {/* ID (ẩn) */}
-            <FormField
-              name="id"
-              render={({ field }) => (
-                <Input placeholder="id" {...field} hidden />
-              )}
-            />
             <FormField
               control={form.control}
               name="albumId"
@@ -266,4 +246,4 @@ const ModalCreate = ({ albums, open, onOpenChange }: IProps) => {
   );
 };
 
-export default ModalCreate;
+export default GalleryModalCreate;
