@@ -1,4 +1,4 @@
-import { readDb, writeDb } from "@/lib/helper";
+import { readDb, writeDb } from "@/lib/readfile";
 import { NextRequest } from "next/server";
 
 const db = await readDb();
@@ -13,10 +13,7 @@ export async function GET(request: NextRequest) {
 
     let photos = [...db.photos];
 
-    // Filter theo search term và album
-    // album comes from query string (a string). db.photos.albumId is a number.
-    // Convert album to number when possible and compare; treat empty or null as no-filter.
-    const albumNum = album ? Number(album) : null;
+    const albumNum = album ? +album : null;
     let filterPhotos = photos.filter((p: IPhoto) => {
       const searchTitle = p.title.toLowerCase().includes(search);
       const filterAlbums =
@@ -78,13 +75,20 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { title, url, thumbnailUrl, albumId } = body;
     const maxId = Math.max(...db.photos.map((p: any) => p.id), 0);
+    const now = new Date();
+    const pad = (n: number) => String(n).padStart(2, "0");
+    const dateStr = now.toISOString().split("T")[0];
+    const timeStr = `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(
+      now.getSeconds()
+    )}`;
+
     const newPhoto = {
       id: maxId + 1,
       albumId,
       title,
       url,
       thumbnailUrl,
-      createdAt: new Date().toISOString().split("T")[0],
+      createdAt: `${dateStr}T${timeStr}`,
     };
     db.photos.push(newPhoto);
     await writeDb(db);

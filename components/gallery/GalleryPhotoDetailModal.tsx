@@ -18,9 +18,7 @@ export function GalleryPhotoDetailModal({
   open,
   onOpenChange,
 }: PhotoDetailModalProps) {
-  // ✅ Kiểm tra xem URL có phải Base64 không
   const isBase64 = photoData?.url?.startsWith("data:image");
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl">

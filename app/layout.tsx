@@ -24,19 +24,22 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="vi">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
-        <Toaster
-          position="top-right"
-          toastOptions={{
-            className: "bg-gray-800 text-white",
-            duration: 3000,
-          }}
-        />
-        <QueryProvider>{children}</QueryProvider>
-      </body>
-    </html>
+    <>
+      <html lang="vi" suppressHydrationWarning>
+        <body
+          className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        >
+          <Toaster
+            position="top-right"
+            richColors
+            closeButton
+            expand
+            duration={3000}
+            theme="system"
+          />
+          <QueryProvider>{children}</QueryProvider>
+        </body>
+      </html>
+    </>
   );
 }

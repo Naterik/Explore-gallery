@@ -1,18 +1,4 @@
-import { promises as fs } from "fs";
-import path from "path";
-
-const dbPath = path.join(process.cwd(), "lib", "db.json");
-
-async function readDb() {
-  try {
-    const data = await fs.readFile(dbPath, "utf-8");
-    return JSON.parse(data);
-  } catch (error) {
-    console.error("Error reading db.json:", error);
-    return { users: [], albums: [], photos: [] };
-  }
-}
-
+import { readDb } from "@/lib/readfile";
 export async function GET(request: Request) {
   try {
     const db = await readDb();

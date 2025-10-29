@@ -35,20 +35,32 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Plus } from "lucide-react";
+import { PictureInPicture, Plus } from "lucide-react";
 import { Spinner } from "@/components/ui/spinner";
 import { IPhoto, Photo } from "@/lib/validators";
+
 type IProps = {
   albums: IAlbums[] | undefined;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onSubmit: (values: Omit<IPhoto, "id">) => Promise<void>;
+  setPreviewUrl: (url: string | null) => void;
+  previewUrl: string | null;
+  isSubmitting: boolean;
+  setIsSubmitting: (value: boolean) => void;
 };
 
-const GalleryModalCreate = ({ albums, open, onOpenChange }: IProps) => {
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const queryClient = useQueryClient();
-
-  const form = useForm({
+const GalleryModalCreate = ({
+  albums,
+  open,
+  onOpenChange,
+  onSubmit,
+  setPreviewUrl,
+  previewUrl,
+  isSubmitting,
+  setIsSubmitting,
+}: IProps) => {
+  const form = useForm<IPhoto>({
     resolver: zodResolver(Photo),
     defaultValues: {
       title: "",
@@ -71,63 +83,48 @@ const GalleryModalCreate = ({ albums, open, onOpenChange }: IProps) => {
     }
   };
 
-  const mutation = useMutation({
-    mutationFn: async (newPhoto: any) => {
-      return axios.post("/api/photos", {
-        title: newPhoto.title,
-        url: newPhoto.url,
-        thumbnailUrl: newPhoto.thumbnailUrl,
-        albumId: newPhoto.albumId,
-      });
-    },
-    mutationKey: ["photos"],
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["photos"] });
-
+  const handleSubmitCreate = async (values: Omit<IPhoto, "id">) => {
+    try {
+      setIsSubmitting(true);
+      await onSubmit(values);
       onOpenChange(false);
       setPreviewUrl(null);
-      form.reset({ title: "", url: "", albumId: 1 });
-      toast.success("Thêm ảnh thành công!", {
-        style: {
-          "--normal-bg": "var(--background)",
-          "--normal-text":
-            "light-dark(var(--color-green-600), var(--color-green-400))",
-          "--normal-border":
-            "light-dark(var(--color-green-600), var(--color-green-400))",
-        } as React.CSSProperties,
-      });
-    },
-    onError: (error: any) => {
-      toast.error(
-        " Lỗi: " + (error?.response?.data?.message || "Không thể thêm ảnh")
-      );
-    },
-  });
-  function onSubmit(values: IPhoto) {
-    mutation.mutate({
-      title: values.title,
-      url: values.url,
-      thumbnailUrl: values.url,
-      albumId: values.albumId || 1,
-    });
-  }
+      form.reset();
+      toast.success("Thêm ảnh thành công!");
+    } catch (error) {
+      console.error("Error creating photo:", error);
+      toast.error("Thêm ảnh thất bại!");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogTrigger asChild>
-        <Button variant="outline">
-          <Plus /> Thêm Ảnh Mới
-        </Button>
+        <button className="inline-flex items-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-semibold rounded-lg shadow-md hover:shadow-xl hover:scale-105 transition-all duration-300 active:scale-95 border border-white/30 dark:border-slate-700 group">
+          <Plus className="w-5 h-5 transition-transform group-hover:rotate-90 duration-300" />
+          <span className="hidden sm:inline">Thêm Ảnh Mới</span>
+          <span className="sm:hidden">Thêm</span>
+        </button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px] " aria-describedby={undefined}>
+      <DialogContent
+        className="sm:max-w-[425px] bg-white dark:bg-slate-900"
+        aria-describedby={undefined}
+      >
         <DialogHeader>
-          <DialogTitle>Thêm Ảnh Mới</DialogTitle>
-          <DialogDescription>
-            Nhập tiêu đề và chọn file ảnh từ máy tính
+          <DialogTitle className="text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+            <PictureInPicture /> Thêm Ảnh Mới
+          </DialogTitle>
+          <DialogDescription className="text-slate-600 dark:text-slate-400">
+            Tải lên ảnh của bạn
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <form
+            onSubmit={form.handleSubmit(handleSubmitCreate)}
+            className="space-y-6"
+          >
             <FormField
               control={form.control}
               name="albumId"
@@ -167,10 +164,7 @@ const GalleryModalCreate = ({ albums, open, onOpenChange }: IProps) => {
                 <FormItem>
                   <FormLabel>Tiêu Đề</FormLabel>
                   <FormControl>
-                    <Input
-                      placeholder="Nhập tiêu đề ảnh (ví dụ: Núi đẹp)"
-                      {...field}
-                    />
+                    <Input placeholder="Nhập tiêu đề ảnh " {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -186,18 +180,16 @@ const GalleryModalCreate = ({ albums, open, onOpenChange }: IProps) => {
                   onChange={handleFileChange}
                 />
               </FormControl>
-              <FormDescription>
-                Chọn file JPG, PNG hoặc WebP (max 5MB)
-              </FormDescription>
             </FormItem>
 
             {previewUrl && (
-              <div className="border rounded p-2">
+              <div className="relative group overflow-hidden rounded-lg border-2 border-slate-200 dark:border-slate-700">
                 <img
                   src={previewUrl}
                   alt="Preview"
-                  className="w-full h-40 object-cover rounded"
+                  className="w-full h-48 object-cover transition-transform duration-300 group-hover:scale-105"
                 />
+                <div className="absolute inset-0 bg-linear-to-t from-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
               </div>
             )}
 
@@ -209,19 +201,33 @@ const GalleryModalCreate = ({ albums, open, onOpenChange }: IProps) => {
               )}
             />
 
-            <Button
+            <button
               type="submit"
-              disabled={mutation.isPending}
-              className="w-full"
+              disabled={isSubmitting}
+              className="w-full px-4 py-3 bg-linear-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold rounded-lg transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-none disabled:hover:translate-y-0 active:scale-95"
             >
-              {mutation.isPending ? (
-                <div className="flex items-center">
-                  <Spinner className="mr-3" /> <span>Đang thêm...</span>
+              {isSubmitting ? (
+                <div className="flex items-center justify-center gap-2">
+                  <div className="flex gap-1">
+                    <div
+                      className="w-1.5 h-1.5 bg-white rounded-full animate-bounce"
+                      style={{ animationDelay: "0s" }}
+                    ></div>
+                    <div
+                      className="w-1.5 h-1.5 bg-white rounded-full animate-bounce"
+                      style={{ animationDelay: "0.1s" }}
+                    ></div>
+                    <div
+                      className="w-1.5 h-1.5 bg-white rounded-full animate-bounce"
+                      style={{ animationDelay: "0.2s" }}
+                    ></div>
+                  </div>
+                  <span>Đang tải lên...</span>
                 </div>
               ) : (
-                "Thêm Ảnh"
+                " Thêm Ảnh"
               )}
-            </Button>
+            </button>
           </form>
         </Form>
       </DialogContent>

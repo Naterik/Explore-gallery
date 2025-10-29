@@ -22,8 +22,13 @@ const fetchAllAlbums = async (): Promise<IAlbums[]> => {
   return res.data.data;
 };
 
-const fetchCreatePhoto = async (newPhoto: IPhoto) => {
-  const res = await axios.post("/api/photos", newPhoto);
+const fetchCreatePhoto = async (newPhoto: Omit<IPhoto, "id">) => {
+  const res = await axios.post("/api/photos", {
+    title: newPhoto.title,
+    url: newPhoto.url,
+    thumbnailUrl: newPhoto.thumbnailUrl,
+    albumId: newPhoto.albumId,
+  });
   return res.data;
 };
 

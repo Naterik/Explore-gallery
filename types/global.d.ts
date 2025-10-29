@@ -6,7 +6,7 @@ declare global {
     albumId: number;
     title: string;
     url: string;
-    thumbnailUrl?: string;
+    thumbnailUrl: string;
     createdAt?: string;
   }
 
