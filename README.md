@@ -134,8 +134,7 @@ Lưu trữ tại `lib/db.json`:
 Deploy lên Vercel:
 
 ```bash
-npm run build
-npm i -g vercel
+yarn install
 vercel
 ```
 
