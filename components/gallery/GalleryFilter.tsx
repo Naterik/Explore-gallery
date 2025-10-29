@@ -15,6 +15,9 @@ type IProps = {
   setSearchTerm: (value: string) => void;
   sortBy: string;
   setSortBy: (value: string) => void;
+  albums?: IAlbums[];
+  selectedAlbum: number | null;
+  setSelectedAlbum: (value: number | null) => void;
 };
 
 const GalleryFilter = ({
@@ -22,6 +25,9 @@ const GalleryFilter = ({
   setSearchTerm,
   sortBy,
   setSortBy,
+  albums = [],
+  selectedAlbum,
+  setSelectedAlbum,
 }: IProps) => {
   return (
     <>
@@ -29,12 +35,34 @@ const GalleryFilter = ({
         <div className="flex-1">
           <Input
             type="text"
-            placeholder=" Tìm kiếm ảnh theo tiêu đề..."
+            placeholder="Tìm kiếm ảnh theo tiêu đề..."
             className=""
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
+
+        <Select
+          value={selectedAlbum !== null ? String(selectedAlbum) : "all"}
+          onValueChange={(value) =>
+            setSelectedAlbum(value === "all" ? null : Number(value))
+          }
+        >
+          <SelectTrigger className="w-[200px]">
+            <SelectValue placeholder="Chọn album" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectGroup>
+              <SelectLabel>Album</SelectLabel>
+              <SelectItem value="all">Tất cả album</SelectItem>
+              {albums.map((album) => (
+                <SelectItem key={album.id} value={String(album.id)}>
+                  {album.title}
+                </SelectItem>
+              ))}
+            </SelectGroup>
+          </SelectContent>
+        </Select>
 
         <Select value={sortBy} onValueChange={setSortBy}>
           <SelectTrigger className="w-[200px]">
@@ -44,9 +72,9 @@ const GalleryFilter = ({
             <SelectGroup>
               <SelectLabel>Sắp xếp</SelectLabel>
               <SelectItem value="newest">Mới nhất</SelectItem>
-              <SelectItem value="oldest"> Cũ nhất</SelectItem>
-              <SelectItem value="title-asc"> Tiêu đề A-Z</SelectItem>
-              <SelectItem value="title-desc"> Tiêu đề Z-A</SelectItem>
+              <SelectItem value="oldest">Cũ nhất</SelectItem>
+              <SelectItem value="title-asc">Tiêu đề A-Z</SelectItem>
+              <SelectItem value="title-desc">Tiêu đề Z-A</SelectItem>
             </SelectGroup>
           </SelectContent>
         </Select>

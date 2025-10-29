@@ -37,18 +37,9 @@ import {
 import { toast } from "sonner";
 import { Plus } from "lucide-react";
 import { Spinner } from "@/components/ui/spinner";
-
-const formSchema = z.object({
-  title: z.string().min(2, {
-    message: "Title must be at least 2 characters.",
-  }),
-  url: z.string().optional(),
-  thumbnailUrl: z.string().optional(),
-  albumId: z.number(),
-});
-
+import { IPhoto, Photo } from "@/lib/validators";
 type IProps = {
-  albums: IAlbum[];
+  albums: IAlbums[] | undefined;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 };
@@ -57,8 +48,8 @@ const GalleryModalCreate = ({ albums, open, onOpenChange }: IProps) => {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const queryClient = useQueryClient();
 
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
+  const form = useForm({
+    resolver: zodResolver(Photo),
     defaultValues: {
       title: "",
       url: "",
@@ -112,19 +103,11 @@ const GalleryModalCreate = ({ albums, open, onOpenChange }: IProps) => {
       );
     },
   });
-  function onSubmit(values: z.infer<typeof formSchema>) {
-    if (!values.title) {
-      toast.error(" Vui lòng nhập tiêu đề!");
-      return;
-    }
-    if (!values.url) {
-      toast.error("Vui lòng chọn file ảnh!");
-      return;
-    }
+  function onSubmit(values: IPhoto) {
     mutation.mutate({
       title: values.title,
       url: values.url,
-      thumbnailUrl: values.thumbnailUrl || values.url,
+      thumbnailUrl: values.url,
       albumId: values.albumId || 1,
     });
   }
@@ -161,7 +144,7 @@ const GalleryModalCreate = ({ albums, open, onOpenChange }: IProps) => {
                     <SelectContent>
                       <SelectGroup>
                         <SelectLabel>Albums</SelectLabel>
-                        {albums.map((album) => (
+                        {albums?.map((album) => (
                           <SelectItem
                             key={album.id}
                             value={album.id.toString()}

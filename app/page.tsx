@@ -1,65 +1,31 @@
 "use client";
-import {
-  useQuery,
-  useMutation,
-  useQueryClient,
-  useInfiniteQuery,
-} from "@tanstack/react-query";
-import axios from "axios";
 import React, { useEffect, useState, useMemo } from "react";
 import { useInView } from "react-intersection-observer";
 import Loading from "./loading";
 import Error from "./error";
-import Items from "@/components/gallery/GalleryItems";
-import { Filter } from "lucide-react";
 import { GalleryPhotoDetailModal } from "@/components/gallery/GalleryPhotoDetailModal";
 import GalleryItems from "@/components/gallery/GalleryItems";
 import GalleryFilter from "@/components/gallery/GalleryFilter";
 import GalleryModalCreate from "@/components/gallery/GalleryModalCreate";
+import useAlbums from "@/hooks/useAlbums";
+import usePhotos from "@/hooks/usePhotos";
 
 const Gallery = () => {
   const { ref, inView } = useInView();
-  const queryClient = useQueryClient();
-  const [title, setTitle] = useState("");
   const [selectedPhotoData, setSelectedPhotoData] = useState<IPhoto | null>(
     null
   );
-  const [albums, setAlbums] = useState<IAlbum[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [modalCreatePhotoOpen, setModalCreatePhotoOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [sortBy, setSortBy] = useState("newest");
+  const [selectedAlbum, setSelectedAlbum] = useState<number | null>(null);
 
-  const fetchAllPhotos = async ({ pageParam = 1 }: { pageParam: number }) => {
-    const params = new URLSearchParams({
-      _page: pageParam.toString(),
-      search: searchTerm,
-      sort: sortBy,
-    });
-    const res = await axios.get(`/api/photos?${params.toString()}`);
-    return res.data;
-  };
-
-  const fetchAllAlbums = async () => {
-    const res = await axios.get(`/api/albums`);
-    setAlbums(res.data.data);
-    return res.data;
-  };
-
-  // Mutation để thêm ảnh mới
-  const addPhotoMutation = useMutation({
-    mutationFn: async (newPhoto: any) => {
-      const res = await axios.post("/api/photos", newPhoto);
-      return res.data;
-    },
-    onSuccess: () => {
-      // Refetch photos sau khi thêm thành công
-      queryClient.invalidateQueries({ queryKey: ["photos"] });
-    },
-    onError: (error) => {
-      console.error("Error adding photo:", error);
-    },
-  });
+  const {
+    data: albumsData,
+    isPending: isLoadingAlbums,
+    error: errorAlbums,
+  } = useAlbums();
 
   const {
     data,
@@ -69,13 +35,10 @@ const Gallery = () => {
     isFetching,
     isFetchingNextPage,
     status,
-  } = useInfiniteQuery({
-    queryKey: ["photos", searchTerm, sortBy],
-    queryFn: fetchAllPhotos,
-    initialPageParam: 1,
-    getNextPageParam: (lastPage) => {
-      return lastPage.nextCursor;
-    },
+  } = usePhotos({
+    searchTerm,
+    sortBy,
+    albumId: selectedAlbum,
   });
 
   const handlePhotoClick = (photo: IPhoto) => {
@@ -87,7 +50,6 @@ const Gallery = () => {
     if (inView && hasNextPage && !isFetchingNextPage) {
       fetchNextPage();
     }
-    fetchAllAlbums();
   }, [inView, hasNextPage, isFetchingNextPage, fetchNextPage]);
 
   return (
@@ -97,7 +59,7 @@ const Gallery = () => {
           🖼️ Photo Gallery - Infinite Scroll
         </h1>
         <GalleryModalCreate
-          albums={albums}
+          albums={albumsData}
           open={modalCreatePhotoOpen}
           onOpenChange={setModalCreatePhotoOpen}
         />
@@ -107,6 +69,9 @@ const Gallery = () => {
         setSearchTerm={setSearchTerm}
         sortBy={sortBy}
         setSortBy={setSortBy}
+        albums={albumsData}
+        selectedAlbum={selectedAlbum}
+        setSelectedAlbum={setSelectedAlbum}
       />
 
       {status === "pending" && <Loading />}
