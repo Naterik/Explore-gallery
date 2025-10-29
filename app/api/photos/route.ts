@@ -1,70 +1,60 @@
-import { REAL_IMAGES } from "@/public/seed";
-import axios from "axios";
-import { get } from "http";
+import { readDb, writeDb } from "@/lib/readfile";
+import { NextRequest } from "next/server";
 
-const apiUrl =
-  process.env.API_PHOTOS || "https://jsonplaceholder.typicode.com/photos";
-
-export async function GET(request: Request) {
+const db = await readDb();
+const limit = +process.env.LIMIT_PER_PAGE! || 10;
+export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
+    const searchParams = request.nextUrl.searchParams;
     const page = searchParams.get("_page") || "1";
-    const search = searchParams.get("search") || "";
+    const search = searchParams.get("search")?.toLowerCase() || "";
+    const album = searchParams.get("albumId") || "";
     const sort = searchParams.get("sort") || "newest";
-    const limit = "10";
 
-    const res = await axios.get(`${apiUrl}?_limit=5000`);
-    let photos = res.data;
+    let photos = [...db.photos];
 
-    if (search) {
-      photos = photos.filter((photo: any) =>
-        photo.title.toLowerCase().includes(search.toLowerCase())
-      );
-    }
+    const albumNum = album ? +album : null;
+    let filterPhotos = photos.filter((p: IPhoto) => {
+      const searchTitle = p.title.toLowerCase().includes(search);
+      const filterAlbums =
+        !albumNum || (albumNum > 0 && p.albumId === albumNum);
+      return searchTitle && filterAlbums;
+    });
 
+    // Sort
     switch (sort) {
       case "title-asc":
-        photos.sort((a: any, b: any) => a.title.localeCompare(b.title));
+        filterPhotos.sort((a: any, b: any) => a.title.localeCompare(b.title));
         break;
       case "title-desc":
-        photos.sort((a: any, b: any) => b.title.localeCompare(a.title));
-        break;
-      case "album-asc":
-        photos.sort((a: any, b: any) => a.albumId - b.albumId);
-        break;
-      case "album-desc":
-        photos.sort((a: any, b: any) => b.albumId - a.albumId);
+        filterPhotos.sort((a: any, b: any) => b.title.localeCompare(a.title));
         break;
       case "oldest":
-        photos.sort((a: any, b: any) => a.id - b.id);
+        filterPhotos.sort(
+          (a: any, b: any) =>
+            new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+        );
         break;
       case "newest":
       default:
-        photos.sort((a: any, b: any) => b.id - a.id);
+        filterPhotos.sort(
+          (a: any, b: any) =>
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        );
         break;
     }
 
+    // Pagination
     const startIdx = (+page - 1) * +limit;
     const endIdx = startIdx + +limit;
-    const paginatedPhotos = photos.slice(startIdx, endIdx);
-
-    //get random image
-    const updatedPhotos = paginatedPhotos.map((photo: any, index: number) => {
-      const imageIndex = (startIdx + index) % REAL_IMAGES.length;
-      return {
-        ...photo,
-        thumbnailUrl: REAL_IMAGES[imageIndex],
-        url: REAL_IMAGES[imageIndex],
-      };
-    });
-
-    const nextCursor = endIdx < photos.length ? +page + 1 : null;
+    const paginatedPhotos = filterPhotos.slice(startIdx, endIdx);
+    const nextCursor = endIdx < filterPhotos.length ? +page + 1 : null;
 
     return new Response(
       JSON.stringify({
-        data: updatedPhotos,
+        data: paginatedPhotos,
         nextCursor: nextCursor,
-        totalCount: photos.length,
+        totalCount: filterPhotos.length,
       }),
       {
         status: 200,
@@ -83,15 +73,26 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { id, title, url, thumbnailUrl, albumId } = body;
-    const res = await axios.post(apiUrl, {
-      id,
+    const { title, url, thumbnailUrl, albumId } = body;
+    const maxId = Math.max(...db.photos.map((p: any) => p.id), 0);
+    const now = new Date();
+    const pad = (n: number) => String(n).padStart(2, "0");
+    const dateStr = now.toISOString().split("T")[0];
+    const timeStr = `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(
+      now.getSeconds()
+    )}`;
+
+    const newPhoto = {
+      id: maxId + 1,
+      albumId,
       title,
       url,
       thumbnailUrl,
-      albumId,
-    });
-    return new Response(JSON.stringify(res.data), {
+      createdAt: `${dateStr}T${timeStr}`,
+    };
+    db.photos.push(newPhoto);
+    await writeDb(db);
+    return new Response(JSON.stringify(newPhoto), {
       status: 201,
       headers: { "Content-Type": "application/json" },
     });
@@ -99,7 +100,7 @@ export async function POST(request: Request) {
     return new Response(
       JSON.stringify({
         error: "Lỗi khi thêm ảnh",
-        details: error.response?.data?.message || error.message,
+        details: error.message,
       }),
       { status: 500, headers: { "Content-Type": "application/json" } }
     );

@@ -1,21 +1,24 @@
 export {};
 
 declare global {
-  export interface IPhoto {
-    albumId?: string;
-    id: string;
+  interface IPhoto {
+    id: number;
+    albumId: number;
     title: string;
     url: string;
-    thumbnailUrl?: string;
+    thumbnailUrl: string;
+    createdAt?: string;
   }
 
-  export interface IAlbum {
-    userId: string;
-    id: string;
+  interface IAlbums {
+    userId: number;
+    id: number;
     title: string;
   }
-  export interface IGallery {
+
+  interface IGallery {
     data: IPhoto[];
-    nextCursor: number;
+    nextCursor: number | null;
+    totalCount?: number;
   }
 }

@@ -1,36 +1,148 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Explore Gallery - Photo Discovery App
 
-## Getting Started
+Ứng dụng khám phá ảnh được xây dựng với Next.js, React Query và Tailwind CSS.
 
-First, run the development server:
+## Cách Cài Đặt và Chạy Dự Án
+
+### Yêu Cầu
+
+- Node.js 18+
+- npm hoặc yarn
+
+### Bước 1: Cài Đặt
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+cd explore-gallery
+npm install
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Bước 2: Chạy Ứng Dụng
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+# Development mode
+npm run dev
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+# Production build
+npm run build
+npm run start
+```
 
-## Learn More
+Ứng dụng chạy tại: http://localhost:3000
 
-To learn more about Next.js, take a look at the following resources:
+### Bước 3: Kiểm Tra API
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+# Lấy danh sách ảnh
+GET http://localhost:3000/api/photos?_page=1&sort=newest
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+# Lấy danh sách album
+GET http://localhost:3000/api/albums
 
-## Deploy on Vercel
+# Tạo ảnh mới
+POST http://localhost:3000/api/photos
+Body: {
+  "title": "New Photo",
+  "url": "https://...",
+  "thumbnailUrl": "https://...",
+  "albumId": 1
+}
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Cách Test Chức Năng
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### 1. Test Danh Sách Ảnh
+
+- Vào trang chủ
+- Scroll xuống tự động load ảnh (10 ảnh/trang)
+- Ảnh hiển thị trong grid
+
+### 2. Test Search & Filter
+
+- Nhập từ khóa để tìm ảnh
+- Chọn album để lọc
+- Chọn sort: Mới nhất, Cũ nhất, Tên A-Z, Z-A
+
+### 3. Test Xem Chi Tiết
+
+- Click ảnh mở modal chi tiết
+- Hiển thị title, date, album, URL
+
+### 4. Test Tạo Ảnh
+
+- Click nút "Thêm Ảnh Mới"
+- Điền form: Album, Tiêu đề, File ảnh
+- Ảnh mới hiển thị ở đầu danh sách
+
+## Framework UI và Thư Viện Sử Dụng
+
+### Frontend Framework
+
+- Next.js 16.0.0 - Framework React
+- React 19.2.0 - UI library
+- TypeScript 5 - Type safety
+
+### State Management & Data
+
+- @tanstack/react-query 5.90.5 - Data fetching & caching
+- axios 1.12.2 - HTTP client
+- react-intersection-observer 9.16.0 - Infinite scroll
+
+### UI & Styling
+
+- Tailwind CSS 4 - Styling framework
+- Radix UI - Accessible components
+  - dialog - Modal
+  - select - Dropdown
+  - label - Form label
+- lucide-react 0.548.0 - Icons
+- sonner 2.0.7 - Toast notifications
+
+### Form & Validation
+
+- react-hook-form 7.65.0 - Form management
+- @hookform/resolvers 5.2.2 - Validation
+- zod 4.1.12 - Schema validation
+
+## Database
+
+Lưu trữ tại `lib/db.json`:
+
+```json
+{
+  "photos": [
+    {
+      "id": 1,
+      "albumId": 1,
+      "title": "Photo title",
+      "url": "https://...",
+      "thumbnailUrl": "https://...",
+      "createdAt": "2025-10-29T15:42:30"
+    }
+  ],
+  "albums": [
+    {
+      "id": 1,
+      "userId": 1,
+      "title": "Album name"
+    }
+  ]
+}
+```
+
+## Deployment
+
+Deploy lên Vercel:
+
+```bash
+npm run build
+npm i -g vercel
+vercel
+```
+
+## Author
+
+Naterik - Explore Gallery Team
+
+## License
+
+MIT License

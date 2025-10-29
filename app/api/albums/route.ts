@@ -1,12 +1,10 @@
-import axios from "axios";
-const apiUrl =
-  process.env.API_ALBUMS || "https://jsonplaceholder.typicode.com/albums";
+import { readDb } from "@/lib/readfile";
 export async function GET(request: Request) {
   try {
-    const res = await axios.get(apiUrl);
+    const db = await readDb();
     return new Response(
       JSON.stringify({
-        data: res.data,
+        data: db.albums,
       }),
       {
         status: 200,
@@ -14,8 +12,8 @@ export async function GET(request: Request) {
       }
     );
   } catch (error) {
-    console.error("Error fetching photos:", error);
-    return new Response(JSON.stringify({ error: "Failed to fetch photos" }), {
+    console.error("Error fetching albums:", error);
+    return new Response(JSON.stringify({ error: "Failed to fetch albums" }), {
       status: 500,
       headers: { "Content-Type": "application/json" },
     });
