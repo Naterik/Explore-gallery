@@ -21,10 +21,6 @@ npm install
 ```bash
 # Development mode
 npm run dev
-
-# Production build
-npm run build
-npm run start
 ```
 
 Ứng dụng chạy tại: http://localhost:3000
@@ -127,15 +123,6 @@ Lưu trữ tại `lib/db.json`:
     }
   ]
 }
-```
-
-## Deployment
-
-Deploy lên Vercel:
-
-```bash
-yarn install
-vercel
 ```
 
 ## Author
